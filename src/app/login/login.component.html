@@ -1,0 +1,56 @@
+<div class="login-container">
+
+    <h2>Login</h2>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+
+        <!-- Email -->
+        <div class="form-group">
+
+            <label for="email">Email</label>
+
+            <input id="email" type="email" formControlName="email" placeholder="Enter your email"
+                autocomplete="username" />
+
+            @if (loginForm.controls.email.touched &&
+            loginForm.controls.email.hasError('required')) {
+            <small class="error">
+                Email is required.
+            </small>
+            }
+
+            @if (loginForm.controls.email.touched &&
+            loginForm.controls.email.hasError('email')) {
+            <small class="error">
+                Enter a valid email address.
+            </small>
+            }
+
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+
+            <label for="password">Password</label>
+
+            <input id="password" type="password" formControlName="password" placeholder="Enter your password"
+                autocomplete="current-password" />
+
+            @if (loginForm.controls.password.touched &&
+            loginForm.controls.password.hasError('required')) {
+            <small class="error">
+                Password is required.
+            </small>
+            }
+
+        </div>
+
+        <button type="submit" [disabled]="isSubmitting">
+            {{isSubmitting ? 'Logging in...' : 'Login'}}
+        </button>
+        @if (errorMessage) { <p class="error">{{ errorMessage }}</p> }
+        @if (successMessage) { <p class="success">{{ successMessage }}</p> }
+
+    </form>
+
+</div>

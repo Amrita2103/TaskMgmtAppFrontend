@@ -9,7 +9,7 @@ import {
 
 import { finalize } from 'rxjs';
 
-import { AuthService } from '../services/auth.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',

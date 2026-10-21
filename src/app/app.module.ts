@@ -6,7 +6,7 @@ import {
 import { BrowserModule } from '@angular/platform-browser';
 import { AppRoutingModule } from './app-routing.module';
 import { App } from './app.component';
-import { LoginComponent } from './login/login.component';
+import { LoginComponent } from './Components/login/login.component';
 import { ReactiveFormsModule } from '@angular/forms';
 import { provideHttpClient } from '@angular/common/http';
 

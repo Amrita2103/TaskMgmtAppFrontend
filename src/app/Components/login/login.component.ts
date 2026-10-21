@@ -18,24 +18,16 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent {
-
+ 
   loginForm = new FormGroup({
-
     email: new FormControl('', {
       nonNullable: true,
-      validators: [
-        Validators.required,
-        Validators.email
-      ]
+      validators: [Validators.required, Validators.email]
     }),
-
     password: new FormControl('', {
       nonNullable: true,
-      validators: [
-        Validators.required
-      ]
+      validators: [Validators.required]
     })
-
   });
 
   isSubmitting = false;
@@ -43,7 +35,7 @@ export class LoginComponent {
   errorMessage = '';
   successMessage = '';
 
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   onSubmit(): void {
 
@@ -73,9 +65,6 @@ export class LoginComponent {
             this.errorMessage = 'Unexpected server response.';
             return;
           }
-
-          this.successMessage = 'Login successful!';
-
           this.loginForm.controls.password.reset();
         },
 
@@ -90,10 +79,7 @@ export class LoginComponent {
           else {
             this.errorMessage = 'Login failed. Please try again.';
           }
-
         }
-
       });
-
   }
 }

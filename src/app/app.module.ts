@@ -4,20 +4,21 @@ import {
   provideZoneChangeDetection,
 } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { AppRoutingModule } from './app-routing.module';
+import { ReactiveFormsModule } from '@angular/forms';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { App } from './app.component';
 import { LoginComponent } from './Components/login/login.component';
-import { ReactiveFormsModule } from '@angular/forms';
-import { provideHttpClient } from '@angular/common/http';
+import { SignUpComponent } from './Components/sign-up/sign-up.component';
+import { authInterceptor } from './interceptors/auth.interceptor';
 
 @NgModule({
-  declarations: [App, LoginComponent],
+  declarations: [App, LoginComponent, SignUpComponent],
   imports: [BrowserModule, AppRoutingModule, ReactiveFormsModule],
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideHttpClient(),
+    provideHttpClient(withInterceptors([authInterceptor]))
   ],
   bootstrap: [App],
 })
-export class AppModule { }
+export class AppModule {}

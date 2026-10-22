@@ -10,6 +10,11 @@ import { AuthResponse, SignUpRequest, UserProfile } from '../models/auth.models'
 const TOKEN_KEY = 'tm_access_token'; // localStorage key for the JWT
 const EXPIRY_KEY = 'tm_token_expiry'; // localStorage key for its expiry time
 
+interface SessionData {
+  accessToken: string;
+  expiresAtUtc: string;
+}
+
 @Injectable({
     providedIn:'root'
 })
@@ -78,11 +83,18 @@ export class AuthService {
    this.clearSession();
   }
   
-  private saveSession(response: AuthResponse): void {
-   localStorage.setItem(TOKEN_KEY, response.accessToken);
-   localStorage.setItem(EXPIRY_KEY, response.expiresAtUtc);
-   this.loggedIn.set(true); // UI switches to the logged-in view
+ private saveSession(response: SessionData): void {
+    //  reject bad or already-expired responses
+    const expiration = Date.parse(response.expiresAtUtc);
+    if (!response.accessToken || !Number.isFinite(expiration) || expiration <= Date.now()) {
+      throw new Error('Invalid authentication response');
+    }
+
+    localStorage.setItem(TOKEN_KEY, response.accessToken);
+    localStorage.setItem(EXPIRY_KEY, response.expiresAtUtc);
+    this.loggedIn.set(true);
   }
+
 
  private clearSession(): void {
    localStorage.removeItem(TOKEN_KEY);

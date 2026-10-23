@@ -10,6 +10,8 @@ import { App } from './app.component';
 import { LoginComponent } from './Components/login/login.component';
 import { SignUpComponent } from './Components/sign-up/sign-up.component';
 import { authInterceptor } from './interceptors/auth.interceptor';
+import { AppRoutingModule } from './app-routing.module'; 
+
 
 @NgModule({
   declarations: [App, LoginComponent, SignUpComponent],

@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import {
   FormControl,
@@ -35,7 +36,11 @@ export class LoginComponent {
   errorMessage = '';
   successMessage = '';
 
-  constructor(private authService: AuthService) { }
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) { }
 
   onSubmit(): void {
 
@@ -66,6 +71,7 @@ export class LoginComponent {
             return;
           }
           this.loginForm.controls.password.reset();
+          this.router.navigateByUrl(this.getSafeReturnUrl());
         },
 
         error: (error: HttpErrorResponse) => {
@@ -81,5 +87,11 @@ export class LoginComponent {
           }
         }
       });
+  }
+
+  // Only allow in-app paths, so ?returnUrl=https://evil.com can't redirect away.
+  private getSafeReturnUrl(): string {
+    const url = this.route.snapshot.queryParamMap.get('returnUrl');
+    return url && url.startsWith('/') && !url.startsWith('//') ? url : '/home';
   }
 }

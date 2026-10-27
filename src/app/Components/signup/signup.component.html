@@ -1,0 +1,133 @@
+<div class="login-container">
+  <h2>Create account</h2>
+
+  <form [formGroup]="signupForm" (ngSubmit)="onSubmit()">
+    <!-- Name -->
+    <div class="form-group">
+      <label for="name">Name</label>
+      <input
+        id="name"
+        type="text"
+        formControlName="name"
+        placeholder="Enter your name"
+        autocomplete="name"
+      />
+
+      @if (
+        signupForm.controls.name.touched &&
+        (signupForm.controls.name.hasError('required') ||
+          signupForm.controls.name.hasError('blank'))
+      ) {
+        <small class="error">Name is required.</small>
+      }
+      @if (signupForm.controls.name.hasError('maxlength')) {
+        <small class="error">Name must be 256 characters or fewer.</small>
+      }
+      @if (signupForm.controls.name.touched && signupForm.controls.name.hasError('server')) {
+        <small class="error">{{ signupForm.controls.name.getError('server') }}</small>
+      }
+      @if (signupForm.controls.name.touched && signupForm.controls.name.hasError('minlength')) {
+        <small class="error">Name must be at least 2 characters.</small>
+      }
+    </div>
+
+    <!-- Email -->
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input
+        id="email"
+        type="email"
+        formControlName="email"
+        placeholder="Enter your email"
+        autocomplete="username"
+      />
+
+      @if (signupForm.controls.email.touched && signupForm.controls.email.hasError('required')) {
+        <small class="error">Email is required.</small>
+      }
+      @if (signupForm.controls.email.touched && signupForm.controls.email.hasError('email')) {
+        <small class="error">Enter a valid email address.</small>
+      }
+      @if (signupForm.controls.email.touched && signupForm.controls.email.hasError('server')) {
+        <small class="error">{{ signupForm.controls.email.getError('server') }}</small>
+      }
+      @if (signupForm.controls.email.hasError('maxlength')) {
+        <small class="error">Email must be 256 characters or fewer.</small>
+      }
+    </div>
+
+    <!-- Password -->
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input
+        id="password"
+        type="password"
+        formControlName="password"
+        placeholder="At least 8 characters"
+        autocomplete="new-password"
+      />
+
+      @if (
+        signupForm.controls.password.touched && signupForm.controls.password.hasError('required')
+      ) {
+        <small class="error">Password is required.</small>
+      }
+      @if (
+        signupForm.controls.password.touched && signupForm.controls.password.hasError('minlength')
+      ) {
+        <small class="error">Password must be at least 8 characters.</small>
+      }
+      @if (
+        signupForm.controls.password.touched && signupForm.controls.password.hasError('server')
+      ) {
+        <small class="error">{{ signupForm.controls.password.getError('server') }}</small>
+      }
+      @if (
+        signupForm.controls.password.touched && signupForm.controls.password.hasError('pattern')
+      ) {
+        <small class="error">Use an uppercase letter, a lowercase letter and a digit.</small>
+      }
+      @if (signupForm.controls.password.hasError('maxlength')) {
+        <small class="error">Password must be 100 characters or fewer.</small>
+      }
+    </div>
+
+    <!-- Confirm password -->
+    <div class="form-group">
+      <label for="confirmPassword">Confirm password</label>
+      <input
+        id="confirmPassword"
+        type="password"
+        formControlName="confirmPassword"
+        placeholder="Re-enter your password"
+        autocomplete="new-password"
+      />
+
+      @if (signupForm.controls.confirmPassword.touched && signupForm.hasError('passwordMismatch')) {
+        <small class="error">Passwords do not match.</small>
+      }
+      @if (
+        signupForm.controls.confirmPassword.touched &&
+        signupForm.controls.confirmPassword.hasError('server')
+      ) {
+        <small class="error">{{ signupForm.controls.confirmPassword.getError('server') }}</small>
+      }
+      @if (
+        signupForm.controls.confirmPassword.touched &&
+        signupForm.controls.confirmPassword.hasError('required')
+      ) {
+        <small class="error">Please confirm your password.</small>
+      }
+    </div>
+
+    <button type="submit" [disabled]="isSubmitting">
+      {{ isSubmitting ? 'Creating account...' : 'Sign up' }}
+    </button>
+
+    @if (errorMessage) {
+      <p class="error">{{ errorMessage }}</p>
+    }
+  </form>
+
+  <p>Already have an account? <a routerLink="/login">Log in</a></p>
+</div>

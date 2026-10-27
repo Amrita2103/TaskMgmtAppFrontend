@@ -1,32 +1,46 @@
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { Router } from '@angular/router';
+import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { environment } from '../../environments/environment';
 
-// Runs on every HttpClient request.
+// Endpoints that must NOT get a bearer token or trigger refresh-on-401.
+// (logout-all and me are NOT listed: they need the token.)
+const PUBLIC_AUTH_ENDPOINTS = /^auth\/(login|signup|refresh|logout)(\?|$)/;
+
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-const auth = inject(AuthService);
+  const auth = inject(AuthService);
+  const router = inject(Router);
 
-// Never attach our token to requests going to other websites.
-if (!req.url.startsWith(environment.apiUrl)) {
-return next(req);
-}
+  const apiPrefix = `${environment.apiUrl}/`;
+  if (
+    !req.url.startsWith(apiPrefix) ||
+    PUBLIC_AUTH_ENDPOINTS.test(req.url.slice(apiPrefix.length))
+  ) {
+    return next(req);
+  }
 
-const token = auth.getToken();
+  const withToken = (r: HttpRequest<unknown>) => {
+    const token = auth.getAccessToken();
+    return token ? r.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : r;
+  };
 
-// Requests are immutable, so clone with the extra header. No token means send it unchanged.
-const authReq = token
-? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
-: req;
+  return next(withToken(req)).pipe(
+    catchError((error: unknown) => {
+      if (!(error instanceof HttpErrorResponse) || error.status !== 401) {
+        return throwError(() => error);
+      }
 
-return next(authReq).pipe(
-catchError((error: HttpErrorResponse) => {
-// 401 while holding a token means it is expired or invalid: 
-if (error.status === 401 && token) {
-auth.logout();
-}
-return throwError(() => error); // pass the error on so components can still react to it
-})
-);
+      // Access token missing/expired/rejected: refresh once, then retry once.
+      return auth.refresh().pipe(
+        catchError((refreshError: unknown) => {
+          auth.clearSession();
+          router.navigate(['/login'], { queryParams: { returnUrl: router.url } });
+          return throwError(() => refreshError);
+        }),
+        switchMap(() => next(withToken(req))),
+      );
+    }),
+  );
 };

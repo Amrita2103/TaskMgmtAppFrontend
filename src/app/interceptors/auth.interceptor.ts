@@ -3,16 +3,21 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { environment } from '../../environments/environment';
 
 // Endpoints that must NOT get a bearer token or trigger refresh-on-401.
 // (logout-all and me are NOT listed: they need the token.)
-const PUBLIC_AUTH_ENDPOINTS = /^\/api\/auth\/(login|signup|refresh|logout)(\?|$)/;
+const PUBLIC_AUTH_ENDPOINTS = /^auth\/(login|signup|refresh|logout)(\?|$)/;
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (!req.url.startsWith('/api/') || PUBLIC_AUTH_ENDPOINTS.test(req.url)) {
+  const apiPrefix = `${environment.apiUrl}/`;
+  if (
+    !req.url.startsWith(apiPrefix) ||
+    PUBLIC_AUTH_ENDPOINTS.test(req.url.slice(apiPrefix.length))
+  ) {
     return next(req);
   }
 
@@ -34,8 +39,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           router.navigate(['/login'], { queryParams: { returnUrl: router.url } });
           return throwError(() => refreshError);
         }),
-        switchMap(() => next(withToken(req)))
+        switchMap(() => next(withToken(req))),
       );
-    })
+    }),
   );
 };

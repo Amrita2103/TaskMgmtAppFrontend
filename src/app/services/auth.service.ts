@@ -1,14 +1,17 @@
-
 import { HttpClient } from '@angular/common/http';
+import { computed, Injectable, signal } from '@angular/core';
+import { Observable, finalize, firstValueFrom, shareReplay, tap } from 'rxjs';
 import { loginRequest } from '../models/login-request';
-import { Observable, tap } from 'rxjs';
+import { signupRequest } from '../models/signup-request';
 import { loginResponse } from '../models/login-response';
-import { Injectable, inject, signal, Service } from '@angular/core';
+import { UserProfile } from '../models/auth.models';
 import { environment } from '../../environments/environment';
-import { AuthResponse, SignUpRequest, UserProfile } from '../models/auth.models';
 
-const TOKEN_KEY = 'tm_access_token'; // localStorage key for the JWT
-const EXPIRY_KEY = 'tm_token_expiry'; // localStorage key for its expiry time
+export interface AuthUser {
+  userId: number;
+  name: string;
+  email: string;
+}
 
 interface SessionData {
   accessToken: string;
@@ -16,71 +19,67 @@ interface SessionData {
 }
 
 @Injectable({
-    providedIn:'root'
+  providedIn: 'root',
 })
-
 export class AuthService {
-   
-    private readonly http = inject(HttpClient);
-    private readonly baseUrl = `${environment.apiUrl}/auth`; 
+  private readonly apiUrl = `${environment.apiUrl}/auth`;
 
-    // Writable login state
-    private readonly loggedIn = signal(false);
+  // Access token lives in memory only. The refresh token is an HttpOnly cookie.
+  private accessToken: string | null = null;
+  private expiresAtUtc: number | null = null;
 
-    // Read-only view for everyone else. 
-    readonly isLoggedIn = this.loggedIn.asReadonly();
+  // Shared by all callers so concurrent 401s trigger ONE refresh.
+  // Required because the backend rotates refresh tokens: a second parallel
+  // refresh would present an already-used token and fail.
+  private refreshInFlight$: Observable<loginResponse> | null = null;
 
-    constructor() {
-    // On app start (including a page refresh), check whether a valid token is already stored.
-    this.loggedIn.set(this.getToken() !== null);
-    }
-  
-    
-   // POST /api/auth/signup. On success, save the token so the user is signed in immediately.
-   signUp(request: SignUpRequest): Observable<AuthResponse> {
-   return this.http
-   .post<AuthResponse>(`${this.baseUrl}/signup`, request)
-   .pipe(tap(response => this.saveSession(response)));
-   }
+  readonly user = signal<AuthUser | null>(null);
+  readonly isLoggedIn = computed(() => this.user() !== null);
 
-   // login
+  constructor(private http: HttpClient) {}
+
   login(credentials: loginRequest): Observable<loginResponse> {
-  return this.http
-    .post<loginResponse>(`${this.baseUrl}/login`, credentials)
-    .pipe(tap(response => this.saveSession(response)));
-   }
-  
-    // GET /api/auth/me. The interceptor adds the Bearer header automatically.
-    getMe(): Observable<UserProfile> {
-    return this.http.get<UserProfile>(`${this.baseUrl}/me`);
-    }
-  
-   // Returns the stored token, or null if missing or expired.
-  getToken(): string | null {
-  const token = localStorage.getItem(TOKEN_KEY);
-  const expiry = localStorage.getItem(EXPIRY_KEY);
-  if (!token || !expiry) return null;
-
-  const expiresAt = Date.parse(expiry);
-  if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
-  this.clearSession(); // expired or unreadable: remove it and flip the UI to logged-out
-  return null;
-   }
- return token;
-}
- getAccessToken(): string | null {
-    return this.getToken();
+    return this.http
+      .post<loginResponse>(`${this.apiUrl}/login`, credentials)
+      .pipe(tap((response) => this.storeSession(response)));
   }
 
+  getMe(): Observable<UserProfile> {
+    return this.http.get<UserProfile>(`${this.apiUrl}/me`);
+  }
 
-    //check authentication state
-    isAuthenicated(): boolean {
-        return this.getToken() !== null;
+  // Creates the account; the backend logs the new user in (201 + refresh cookie).
+  signup(request: signupRequest): Observable<loginResponse> {
+    return this.http
+      .post<loginResponse>(`${this.apiUrl}/signup`, request)
+      .pipe(tap((response) => this.storeSession(response)));
+  }
+
+  // Uses the refresh cookie to get a new access token.
+  refresh(): Observable<loginResponse> {
+    if (!this.refreshInFlight$) {
+      this.refreshInFlight$ = this.http.post<loginResponse>(`${this.apiUrl}/refresh`, null).pipe(
+        tap((response) => this.storeSession(response)),
+        finalize(() => (this.refreshInFlight$ = null)),
+        shareReplay({ bufferSize: 1, refCount: false }),
+      );
     }
+    return this.refreshInFlight$;
+  }
 
-   // Clears the session. The UI switches back to the sign-up form because the signal changes.
-   logout(): void {
-   this.clearSession();
+  // Runs once at app startup: restores the session after a page reload.
+  async initialize(): Promise<void> {
+    try {
+      await firstValueFrom(this.refresh());
+    } catch {
+      // No valid refresh cookie: user simply isn't logged in.
+      this.clearSession();
+    }
+  }
+
+  // Tells the server to revoke the session, then clears local state either way.
+  logout(): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/logout`, null).pipe(finalize(() => this.clearSession()));
   }
   
  private saveSession(response: SessionData): void {
@@ -101,8 +100,27 @@ export class AuthService {
    localStorage.removeItem(EXPIRY_KEY);
    this.loggedIn.set(false); // UI switches to the sign-up form
   }
+
+  isAuthenticated(): boolean {
+    return this.getAccessToken() !== null;
+  }
+
+  // Local only (no server call).
+  clearSession(): void {
+    this.accessToken = null;
+    this.expiresAtUtc = null;
+    this.user.set(null);
+  }
+
+  private storeSession(response: loginResponse): void {
+    const expiration = Date.parse(response.expiresAtUtc);
+
+    if (!response.accessToken || !Number.isFinite(expiration) || expiration <= Date.now()) {
+      throw new Error('Invalid authentication response');
+    }
+
+    this.accessToken = response.accessToken;
+    this.expiresAtUtc = expiration;
+    this.user.set({ userId: response.userId, name: response.name, email: response.email });
+  }
 }
-
-
-
-

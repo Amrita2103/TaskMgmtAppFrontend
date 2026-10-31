@@ -1,59 +1,51 @@
-# TaskManagementUi
+# Task Management UI
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.2.
+Angular application using NgModules, routing, Reactive Forms and SCSS.
 
-## Development server
+## Local development
 
-To start a local development server, run:
-
-```bash
-ng serve
+```powershell
+npm.cmd ci
+npm.cmd start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Open `http://localhost:4200`. Run the backend at `http://localhost:5005`.
+`src/environments/environment.development.ts` configures its `/api` base URL.
+Use `localhost` for both applications for the SameSite=Strict cookie.
+The backend must allow exactly `http://localhost:4200` with credentialed CORS.
+HTTP non-Secure HttpOnly cookies are permitted only for localhost Development.
 
-## Code scaffolding
+## Authentication
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- Access tokens stay in memory. The browser manages the HttpOnly refresh cookie;
+  the frontend never reads it or writes tokens to browser storage.
+- Auth requests include `withCredentials: true`. Auth POSTs carry `X-CSRF: 1`.
+- Startup refreshes the session before routing. Protected requests send a bearer
+  token; a 401 triggers a shared refresh and one retry. Failed refresh clears
+  local state and redirects to login.
+- Refresh and current-session logout send no body and need no bearer token.
+  Logout-all requires bearer authentication. Logout actions clear local state
+  on completion or failure; server revocation requires a successful API response.
+- The backend owns the 15-minute JWT expiry, fixed seven-day session expiry,
+  token rotation, three-session limit and oldest-session eviction. Logout does
+  not invalidate issued JWTs before expiry. Failed refresh never modifies the
+  HttpOnly cookie from frontend code.
 
-```bash
-ng generate component component-name
+## Production and verification
+
+Production uses `/api` on the frontend origin. Configure a reverse proxy or set
+an explicit HTTPS API URL in `src/environments/environment.ts` before building.
+Use HTTPS and explicitly configured backend allowed origins.
+
+```powershell
+npm.cmd run build
+npm.cmd run build -- --configuration development
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+With the API and SQL Server running, verify signup/login, refresh after reload,
+`/me`, logout, logout-all, cookie rotation and fourth-login eviction in a browser.
+Inspect credentialed CORS and CSRF headers in Network tools. Confirm revoked or
+rotated tokens are rejected. The refresh cookie must not be readable by JavaScript.
 
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+The `.spec.ts` files remain intentionally empty at the user's request. Builds
+verify compilation, not end-to-end authentication or database behavior.

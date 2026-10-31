@@ -1,0 +1,10 @@
+<div class="home">
+  <h2>Welcome, {{ user()?.name }}</h2>
+  <p>{{ user()?.email }}</p>
+
+  <button type="button" (click)="callMe()">Call /api/auth/me</button>
+  <button type="button" (click)="logout()">Logout</button>
+  <button type="button" (click)="logoutAll()">Log out of all devices</button>
+
+  @if (meResult()) { <pre>{{ meResult() }}</pre> }
+</div>

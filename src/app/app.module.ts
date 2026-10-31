@@ -9,7 +9,8 @@ import { SignupComponent } from './Components/signup/signup.component';
 import { HomeComponent } from './Components/home/home.component';
 import { AuthService } from './services/auth.service';
 import { authInterceptor } from './interceptors/auth.interceptor';
-import { csrfInterceptor } from './interceptors/csrf.interceptor';
+import { AppRoutingModule } from './app-routing.module'; 
+
 
 @NgModule({
   declarations: [App, LoginComponent, SignupComponent, HomeComponent],

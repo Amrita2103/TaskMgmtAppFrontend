@@ -13,6 +13,11 @@ export interface AuthUser {
   email: string;
 }
 
+interface SessionData {
+  accessToken: string;
+  expiresAtUtc: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -76,19 +81,24 @@ export class AuthService {
   logout(): Observable<unknown> {
     return this.http.post(`${this.apiUrl}/logout`, null).pipe(finalize(() => this.clearSession()));
   }
+  
+ private saveSession(response: SessionData): void {
+    //  reject bad or already-expired responses
+    const expiration = Date.parse(response.expiresAtUtc);
+    if (!response.accessToken || !Number.isFinite(expiration) || expiration <= Date.now()) {
+      throw new Error('Invalid authentication response');
+    }
 
-  // Revokes every session of this user (needs the bearer token), then clears local state.
-  logoutAll(): Observable<unknown> {
-    return this.http
-      .post(`${this.apiUrl}/logout-all`, null)
-      .pipe(finalize(() => this.clearSession()));
+    localStorage.setItem(TOKEN_KEY, response.accessToken);
+    localStorage.setItem(EXPIRY_KEY, response.expiresAtUtc);
+    this.loggedIn.set(true);
   }
 
-  getAccessToken(): string | null {
-    if (!this.accessToken || this.expiresAtUtc === null || Date.now() >= this.expiresAtUtc) {
-      return null;
-    }
-    return this.accessToken;
+
+ private clearSession(): void {
+   localStorage.removeItem(TOKEN_KEY);
+   localStorage.removeItem(EXPIRY_KEY);
+   this.loggedIn.set(false); // UI switches to the sign-up form
   }
 
   isAuthenticated(): boolean {
